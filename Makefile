@@ -38,6 +38,7 @@ CLANG_LIBS := \
     -lclangToolingCore \
     -lclangTooling \
     -lclangFormat \
+	-lclangCodeGen \
     -Wl,--end-group
 
 CXXFLAG := -O2 $(CLANG_INCLUDES) $(shell $(LLVM_CONFIG) --cxxflags)
@@ -99,6 +100,7 @@ $(TARGET_DEBUG): $(OBJ_DEBUG)
 all: $(TARGET)
 
 run: all
+	@echo "------------Compilation end.------------"
 	@$(BIN_PATH)/$(TARGET_NAME)
 
 debug: $(TARGET_DEBUG)

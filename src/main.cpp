@@ -5,16 +5,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 #include <string>
 #include <vector>
-/*
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
-*/
+#include <iostream>
 
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Support/TargetSelect.h>
@@ -33,7 +26,6 @@ int main( int argc, char *argv[] )
 {
 
     // Sample input
-    constexpr auto testCodeFileName = "test.cpp";
     constexpr auto testCode = "int test() { return 2+2; }";
 
     // Send code through a pipe to stdin
@@ -51,15 +43,34 @@ int main( int argc, char *argv[] )
     // Initialized Targets
     llvm::InitializeAllTargetMCs();
     llvm::InitializeAllAsmPrinters();
+    llvm::InitializeNativeTarget();
     LLVMInitializeAllTargets();
 
     // Prepare compilation arguments
     std::vector<const char *> args;
     args.push_back("--target=x86_64"); // check Triple.h for more target asm.
-    args.push_back("-x c"); // Code is in c language
+    args.push_back("-xc"); // Code is in c language
     args.push_back("-"); // Read code from stdin
 
-    std::unique_ptr<clang::CompilerInvocation> CI =
+    std::shared_ptr<clang::CompilerInvocation> CI =
         clang::createInvocationFromCommandLine(llvm::makeArrayRef(args) , NULL);
+
+    // Create CompilerInstance
+    clang::CompilerInstance Clang;
+    Clang.setInvocation(CI);
+
+    // Initialize CompilerInstace
+    Clang.createDiagnostics();
+
+    // Create and execute action
+    clang::CodeGenAction *compilerAction; 
+    compilerAction = new clang::EmitObjAction();
+    Clang.ExecuteAction(*compilerAction);
+
+    // Get compiled object (be carefull with buffer size)
+    close(codeInPipe[0]);
+    char objBuffer[2048];
+    read(codeOutPipe[0], objBuffer, sizeof(objBuffer));
+    std::cout << objBuffer << std::endl;
 	return 0;
 }
