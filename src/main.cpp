@@ -50,6 +50,10 @@ int main( int argc, char *argv[] )
 
     std::shared_ptr<clang::CompilerInvocation> CI =
         clang::createInvocationFromCommandLine(llvm::makeArrayRef(args) , NULL);
+    //TODO: CI->getHeaderSearchOpts().AddPath(), getLangOpts(), getTargetOpts(),
+    // getFrontendOpts(), getCodeGenOpts() for more configs or checking status
+    // more seeting: https://stackoverflow.com/questions/53525502/compiling-c-on-the-fly-clang-libtooling-fails-to-set-triple-for-llvm-ir
+    
     // Create CompilerInstance
     clang::CompilerInstance Clang;
     Clang.setInvocation(std::move(CI));
@@ -60,11 +64,12 @@ int main( int argc, char *argv[] )
         return 1;
     }
 
-    //TODO: Infer the builtin include path if unspecified
 
 	// Create and execute the frontend to generate an LLVM bitcode module.
 	std::unique_ptr<clang::CodeGenAction> Act(new clang::EmitLLVMOnlyAction());
 	if (!Clang.ExecuteAction(*Act)) {
+        llvm::errs() << "Failed to EmitLLVMOnlyAction().\n";
+        //TODO: Use TextDiagnosticPrinter in "clang-interpreter" for more.
 	    return 1;
     }
 
