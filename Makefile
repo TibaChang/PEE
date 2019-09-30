@@ -9,6 +9,9 @@ CLANG_INCLUDES := \
     -I$(LLVM_SRC_PATH)/clang/include \
     -I$(LLVM_BUILD_PATH)/tools/clang/include
 
+# user config
+USER_DEFINE := 
+
 # List of Clang libraries to link. The proper -L will be provided by the
 # call to llvm-config
 # Note that I'm using -Wl,--{start|end}-group around the Clang libs; this is
@@ -41,7 +44,7 @@ CLANG_LIBS := \
 	-lclangCodeGen \
     -Wl,--end-group
 
-CXXFLAG := -O2 $(CLANG_INCLUDES) $(shell $(LLVM_CONFIG) --cxxflags)
+CXXFLAG := -O2 $(USER_DEFINE) $(CLANG_INCLUDES) $(shell $(LLVM_CONFIG) --cxxflags)
 LDFLAGS := $(shell $(LLVM_CONFIG) --ldflags)
 LIBS := $(CLANG_LIBS) $(shell $(LLVM_CONFIG) --libs --system-libs)
 DBGFLAG := -O0 -g3
