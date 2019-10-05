@@ -9,16 +9,21 @@
 #include <vector>
 #include <iostream>
 
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/Target/TargetMachine.h>
-#include <llvm/Support/TargetSelect.h>
-
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Basic/DiagnosticOptions.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/CodeGen/CodeGenAction.h>
 #include <clang/Basic/TargetInfo.h>
+
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Analysis/Passes.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/GlobalValue.h>
+
 
 #define PIPE_WRITE  1
 #define PIPE_READ   0
@@ -27,7 +32,7 @@
 int main( int argc, char *argv[] )
 {
     // Sample input
-    constexpr auto testCode = "int main() { return 2+2*2; }";
+    constexpr auto testCode = "int shift() { return 2+2*2; }";
 
     // Send code through a pipe to stdin
     int codeInPipe[2];
@@ -77,9 +82,31 @@ int main( int argc, char *argv[] )
     llvm::InitializeAllAsmPrinters();
 
     std::unique_ptr<llvm::LLVMContext> Ctx(Act->takeLLVMContext());
-    std::unique_ptr<llvm::Module> theModule = Act->takeModule();
+    std::shared_ptr<llvm::Module> TheModule = Act->takeModule();
 
-    llvm::errs() << *theModule << "\n";
+    if (!TheModule) {
+        llvm::errs() << "TheModule is empty.\n";
+        return 1;
+    }
+
+    llvm::errs() << *TheModule << "\n";
+
+    for (auto iter1 = TheModule->getFunctionList().begin(); 
+            iter1 != TheModule->getFunctionList().end(); iter1++) {
+        llvm::Function &f = *iter1;
+        llvm::errs() << " STEP: 1 Function: " << f.getName().str() << "\n";
+    }
+
+    // MCJITCAPITest.cpp has more examples.
+    llvm::legacy::FunctionPassManager FPM(TheModule.get());
+    FPM.add(llvm::createCostModelAnalysisPass());
+    FPM.doInitialization();
+    for (llvm::Function &F : *TheModule) {
+        if (!F.isDeclaration()) {
+            FPM.run(F);
+        }
+	}
+    FPM.doFinalization();
 #if 0
     // Get compiled object (be carefull with buffer size)
     close(codeInPipe[PIPE_READ]);
